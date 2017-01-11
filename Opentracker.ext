@@ -5,25 +5,34 @@ server {
 	access_log  /var/log/nginx/opentracker.access.log;
 	error_log /var/log/nginx/opentracker.error.log;
     	location / {
+		
 		#############################################
 		# If u want to use a passkey		    #	
 		if ( $request_uri ~ ^/([0-9a-z]+)/(.*)$ ) {
 			set $apikey $1;
 		}
 		#############################################	 
+		
+		
 		if ( $args ~* ^(.*)&ip=[^&]+(.*)$ ) {
 			set $args $1$2;
 		}
 		set $arg_ip $remote_addr;
+		
+
 		#############################################
 		# if u want to use a passkey		    #
 		set $auth_request_uri "http://ipserverauth";
 		auth_request	/auth;	
 		#############################################
 		
+
+		#############################################
 		### Remove /([0-9a-z]+) for no passkey		
 		rewrite /([0-9a-z]+)/scrape$ /scrape/?$args? break;
 		rewrite /([0-9a-z]+)/announce$ /announce/?$args&ip=$arg_ip? break;
+		#############################################
+
 		
 		proxy_pass         http://opentracker/;
 		proxy_set_header   Host             $host;
@@ -40,13 +49,19 @@ server {
     			proxy_set_header X-Original-URI $request_uri;
 		}
 		##############################################  
-    		location ~ /\.well-known/acme-challenge {
+ 
+
+
+		##############################################
+		# Needed for LetsEncrypt SSL		     #
+   		location ~ /\.well-known/acme-challenge {
         		allow all;
     		}
     		location ~ /\. { 
 			deny all; access_log off; 
 		log_not_found off; 
 		}
+		##############################################
 	}
 
 }
@@ -56,16 +71,20 @@ server {
 	server_name	tracker.domain.tld;
 
 	location / {
+
 		##############################################
                 # if u want to use a passkey                 #
 		if ( $request_uri ~ ^/([0-9a-z]+)/(.*)$ ) {
 		 	set $apikey $1;
 		}
 		##############################################	
+		
+
 		if ($args ~* ^(.*)&ip=[^&]+(.*)$) {
                   set $args $1$2;
                  }
 		
+
 		##############################################
 		# if u want to use a passkey                 #
 		set $arg_ip $remote_addr;
@@ -73,20 +92,26 @@ server {
 		auth_request    /authssl;
 		##############################################
 		
-		### Remove /([0-9a-z]+) for no passkey
+	
+		##############################################
+		### Remove /([0-9a-z]+) for no passkey       #
 		rewrite /([0-9a-z]+)/scrape$ /scrape/?$args? break;
          	rewrite /([0-9a-z]+)/announce$ /announce/?$args&ip=$arg_ip? break;
-	 	
+		##############################################
+			 	
+
 		proxy_pass         http://opentracker/; 
          	proxy_set_header   Host             $host;
          	proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
          	proxy_set_header X-Real-IP $remote_addr;
 		
+
+
 		##############################################
                 # if u want to use a passkey                 #		
 		location /authssl {
 			set $auri $auth_request_uri?apikey=$apikey;
-			proxy_pass $auri;        #http://10.0.6.10?test=$apikey ;
+			proxy_pass $auri;        
                 	proxy_pass_request_body off;
                 	proxy_set_header Content-Length "";
                 	proxy_set_header X-Original-URI $request_uri;
@@ -120,7 +145,11 @@ server {
 
  
 }
+################ Configure Opentracker IP:PORT ##########################
 
 upstream opentracker {
 	server 0.0.0.0:6969; #Set ip port Opentracker 
 }
+
+
+
